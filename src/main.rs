@@ -61,7 +61,7 @@ const SHIFT: [u32; 64] = [
 ];
 
 /*
- * Four 32-bit words maintaining the state of the digest during hashing.
+ * Four 32-bit integer maintaining the state of the digest during hashing.
  */
 struct State {
     a: u32,
@@ -71,7 +71,6 @@ struct State {
 }
 
 impl Default for State {
-
     /**
      * Default constructor; initializes each of the State fields 
      * to the initial values from 3.3
@@ -87,15 +86,51 @@ impl Default for State {
 }
 
 impl State {
-
     /**
      * Rotates the state values according to https://datatracker.ietf.org/doc/html/rfc1321#section-3.4
+     * 
+     * A -> D
+     * D -> C
+     * C -> B
+     * B -> B + F
      */
     fn rotate (&mut self, f: u32) {
        self.a = self.d;
        self.d = self.c;
        self.c = self.b;
        self.b = self.b.wrapping_add(f);
+    }
+
+    /**
+     * Bitwise wrapping addition of provided 32-bit integers into state variables
+     */
+    fn add (&mut self, a: u32, b: u32, c: u32, d: u32) {
+        self.a = self.a.wrapping_add(a);
+        self.b = self.b.wrapping_add(b);
+        self.c = self.c.wrapping_add(c);
+        self.d = self.d.wrapping_add(d);
+    }
+
+    /**
+     * Returns a byte vector representation of this State's integers
+     */
+    fn export (&mut self) -> Vec<u8> {
+        /*
+        * From https://datatracker.ietf.org/doc/html/rfc1321#section-3.5:
+        * 
+        * The message digest produced as output is A, B, C, D. That is, we
+        * begin with the low-order byte of A, and end with the high-order byte
+        * of D.
+        * 
+        * This section converts each u32 into 4 u8s, collecting all of the u8s into a Vec
+        */
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&self.a.to_le_bytes());
+        bytes.extend_from_slice(&self.b.to_le_bytes());
+        bytes.extend_from_slice(&self.c.to_le_bytes());
+        bytes.extend_from_slice(&self.d.to_le_bytes());
+
+        return bytes;
     }
 }
 
@@ -156,8 +191,9 @@ hash (message: &str) -> String {
     pad(&mut message_bytes);
 
     // 512-bit chunks
-    for chunk in message_bytes.chunks(64) {
+    for outer_block in message_bytes.chunks(64) {
 
+        // Capture original state values for this iteration
         let a0 = state.a;
         let b0 = state.b;
         let c0 = state.c;
@@ -166,9 +202,10 @@ hash (message: &str) -> String {
         let mut m: [u32; 16] = [0; 16];
         let mut indx = 0;
 
-        // Fill M array with 32-bit words from the outer 512-bit chunk
-        for int_chunk in chunk.chunks(4) {
-            let (b1, b2, b3, b4) = (int_chunk[0] as u32, int_chunk[1] as u32, int_chunk[2] as u32, int_chunk[3] as u32);
+        // Fill M array with 32-bit integer from the outer 512-bit chunk
+        for chunk in outer_block.chunks(4) {
+            // Convert bytes into little-endian u32 integer and insert into m[indx]
+            let (b1, b2, b3, b4) = (chunk[0] as u32, chunk[1] as u32, chunk[2] as u32, chunk[3] as u32);
             m[indx] = (b4 << 24) | (b3 << 16) | (b2 << 8) | b1;
             indx += 1;
         }
@@ -229,28 +266,12 @@ hash (message: &str) -> String {
             indx += 1;
         }
 
-        state.a = state.a.wrapping_add(a0);
-        state.b = state.b.wrapping_add(b0);
-        state.c = state.c.wrapping_add(c0);
-        state.d = state.d.wrapping_add(d0);
+        // Add original state back ito the state struct
+        state.add(a0, b0, c0, d0);
     }
 
-    /*
-     * From https://datatracker.ietf.org/doc/html/rfc1321#section-3.5:
-     * 
-     * The message digest produced as output is A, B, C, D. That is, we
-     * begin with the low-order byte of A, and end with the high-order byte
-     * of D.
-     * 
-     * This section converts each u32 into 4 u8s, collecting all of the u8s into a Vec
-     */
-    let mut bytes = Vec::new();
-    bytes.extend_from_slice(&state.a.to_le_bytes());
-    bytes.extend_from_slice(&state.b.to_le_bytes());
-    bytes.extend_from_slice(&state.c.to_le_bytes());
-    bytes.extend_from_slice(&state.d.to_le_bytes());
-
-    let digest: [u8; 16] = bytes.try_into().expect("Wrong length");
+    // Export state integers into a byte array
+    let digest: [u8; 16] = state.export().try_into().expect("Wrong length");
 
     // Encode into base 64
     return hex::encode(&digest); 
