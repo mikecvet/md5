@@ -1,15 +1,8 @@
 use clap::{arg, Command};
-use std::{fs};
+use std::fs;
 extern crate hex;
 
 const MAX_LEN:usize = 18446744073709551615;
-
-const SHIFT: [u32; 64] = [
-    7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
-    5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
-    4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
-    6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,
-];
 
 /*
  * From https://datatracker.ietf.org/doc/html/rfc1321#section-3.4
@@ -59,6 +52,17 @@ const B_INIT: u32 = 0xefcdab89;
 const C_INIT: u32 = 0x98badcfe;
 const D_INIT: u32 = 0x10325476;
 
+// Rotation table
+const SHIFT: [u32; 64] = [
+    7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
+    5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
+    4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
+    6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,
+];
+
+/*
+ * Four 32-bit words maintaining the state of the digest during hashing.
+ */
 struct State {
     a: u32,
     b: u32,
@@ -67,6 +71,11 @@ struct State {
 }
 
 impl Default for State {
+
+    /**
+     * Default constructor; initializes each of the State fields 
+     * to the initial values from 3.3
+     */
     fn default () -> State {
         State {
             a: A_INIT,
@@ -82,7 +91,7 @@ impl State {
     /**
      * Rotates the state values according to https://datatracker.ietf.org/doc/html/rfc1321#section-3.4
      */
-    fn rotate(&mut self, f: u32) {
+    fn rotate (&mut self, f: u32) {
        self.a = self.d;
        self.d = self.c;
        self.c = self.b;
@@ -105,8 +114,8 @@ impl State {
  * least one bit and at most 512 bits are appended.
  */
 fn
-pad (message: &mut Vec<u8>) 
-{
+pad (message: &mut Vec<u8>) {
+    // Get message length in bits; length times 8 since message is in bytes
     let mlen_in_bits = message.len() * 8 % MAX_LEN;
 
     // Appends 1 << 7, ie 1000 0000, we're working in bytes
@@ -116,7 +125,6 @@ pad (message: &mut Vec<u8>)
     while (message.len() * 8 % MAX_LEN) % 512 != 448 {
         message.push(0x0);
     }
-
 
     /* 
     * From https://datatracker.ietf.org/doc/html/rfc1321#section-3.2
@@ -145,7 +153,7 @@ hash (message: &str) -> String {
     let mut message_bytes = message.as_bytes().to_vec();
 
     // Pad the input message according to specification, so that its length mod 512 == 0
-    pad (&mut message_bytes);
+    pad(&mut message_bytes);
 
     // 512-bit chunks
     for chunk in message_bytes.chunks(64) {
@@ -249,7 +257,7 @@ hash (message: &str) -> String {
 }
 
 fn 
-tests() {
+tests () {
     assert!(hash("").eq("d41d8cd98f00b204e9800998ecf8427e"));
     assert!(hash("abcde").eq("ab56b4d92b40713acc5af89985d4b786"));
     assert!(hash("abcdefghijklmnopqrstuvwxyz123456789012345678901234567890").eq("68b7c41b350d85fe015fc2602f128c4c"));
@@ -258,7 +266,7 @@ tests() {
 }
 
 fn 
-main() {
+main () {
     let matches = Command::new("md5")
     .version("0.1")
     .about("Fun with cryptographic hash functions")
