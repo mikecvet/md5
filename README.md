@@ -1,5 +1,5 @@
 # MD5
-This is a toy implementation of the MD5 digest algorithm, implemented in Rust.
+This is a toy implementation of the MD5 digest algorithm, implemented in Rust. This program was a fun Rust-learning adventure.
 
 There are a few simple arugments to the program:
 
