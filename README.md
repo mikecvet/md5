@@ -1,7 +1,7 @@
 # MD5
 This is a toy implementation of the MD5 digest algorithm, implemented in Rust. This program was a fun Rust-learning adventure.
 
-There are a few simple arugments to the program:
+There are a few simple arguments to the program:
 
     ~/code/md5 ~>> cargo build --release
     Finished release [optimized] target(s) in 0.03s
