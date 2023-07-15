@@ -181,6 +181,10 @@ pad (message: &mut Vec<u8>) {
     message.extend_from_slice(&len_in_bytes);
 }
 
+/**
+ * Performs the MD5 hashing algorithm on the provided message string. Pads the input
+ * string before processing. Returns a base-64 encoded digest string.
+ */
 fn
 hash (message: &str) -> String {
 
