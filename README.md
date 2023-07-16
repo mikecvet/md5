@@ -23,7 +23,7 @@ I tested the performance of this code against the built-in `md5` command-line to
 
     real	0m1.871s
     user	0m1.675s
-    sys	    0m0.193s
+    sys	   0m0.193s
 
     ~/code/md5 ~>> time md5 ~/Downloads/wiki/enwik9 
     MD5 (/Users/mike/Downloads/wiki/enwik9) = e206c3450ac99950df65bf70ef61a12d
