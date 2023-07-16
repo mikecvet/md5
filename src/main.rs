@@ -1,5 +1,5 @@
 use clap::{arg, Command};
-use std::fs;
+use std::{fs, io::Read};
 extern crate hex;
 
 const MAX_LEN:usize = 18446744073709551615;
@@ -182,20 +182,29 @@ pad (message: &mut Vec<u8>) {
 }
 
 /**
+ * Convenience function for passing strings; converts given string to a Vector of u8 bytes for 
+ * the hash() function.
+ */
+fn hash_string (message: &str) -> String {
+    let mut message_bytes = message.as_bytes().to_vec();
+    return hash (&mut message_bytes);
+}
+
+/**
  * Performs the MD5 hashing algorithm on the provided message string. Pads the input
  * string before processing. Returns a base-64 encoded digest string.
  */
 fn
-hash (message: &str) -> String {
+hash (message: &mut Vec<u8>) -> String {
 
     let mut state:State = Default::default();
-    let mut message_bytes = message.as_bytes().to_vec();
+    //let mut message_bytes = message.as_bytes().to_vec();
 
     // Pad the input message according to specification, so that its length mod 512 == 0
-    pad(&mut message_bytes);
+    pad (message);
 
     // 512-bit chunks
-    for outer_block in message_bytes.chunks(64) {
+    for outer_block in message.chunks(64) {
 
         // Capture original state values for this iteration
         let a0 = state.a;
@@ -283,9 +292,9 @@ hash (message: &str) -> String {
 
 fn 
 tests () {
-    assert!(hash("").eq("d41d8cd98f00b204e9800998ecf8427e"));
-    assert!(hash("abcde").eq("ab56b4d92b40713acc5af89985d4b786"));
-    assert!(hash("abcdefghijklmnopqrstuvwxyz123456789012345678901234567890").eq("68b7c41b350d85fe015fc2602f128c4c"));
+    assert!(hash_string("").eq("d41d8cd98f00b204e9800998ecf8427e"));
+    assert!(hash_string("abcde").eq("ab56b4d92b40713acc5af89985d4b786"));
+    assert!(hash_string("abcdefghijklmnopqrstuvwxyz123456789012345678901234567890").eq("68b7c41b350d85fe015fc2602f128c4c"));
 
     println!("tests completed successfully!");
 }
@@ -305,14 +314,17 @@ main () {
     let test = matches.get_one::<bool>("test");
 
     match (string, path, test) {
-        (Some(text), None, Some(false)) => {
-            let digest = hash(&text);
+        (Some(&ref text), None, Some(false)) => {
+            let digest = hash_string(&text);
             println!("{}", digest);
         },
         (None, Some(f), Some(false)) => {
-            let contents = fs::read_to_string(f)
-                .expect("Should have been able to read the file");
-            let digest = hash(&contents);
+            let mut file_data: Vec<u8> = Vec::new();
+            let mut file = fs::File::open(f).expect("unable to open file");
+
+            file.read_to_end(&mut file_data).expect("unable to read data");
+
+            let digest = hash(&mut file_data);
             println!("{}", digest);
         },
         (None, None, Some(true)) => {
