@@ -282,11 +282,10 @@ hash (message: &mut Vec<u8>) -> String {
         state.add(a0, b0, c0, d0);
     }
 
-    // Export state integers into a byte array
-    let digest: [u8; 16] = state.export().try_into().expect("Wrong length");
-
-    // Encode into base 64
-    return hex::encode(&digest); 
+    // Encode state into base 64
+    return hex::encode(
+        &state.export()
+    );
 }
 
 fn 
