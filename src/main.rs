@@ -198,7 +198,6 @@ fn
 hash (message: &mut Vec<u8>) -> String {
 
     let mut state:State = Default::default();
-    //let mut message_bytes = message.as_bytes().to_vec();
 
     // Pad the input message according to specification, so that its length mod 512 == 0
     pad (message);
